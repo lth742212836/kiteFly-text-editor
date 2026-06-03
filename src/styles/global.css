@@ -1,0 +1,201 @@
+/**
+ * src/styles/global.css - 全局样式表
+ * 
+ * 定义应用级别的样式变量、滚动条样式和基础组件样式。
+ * 采用暗色主题，模仿 VS Code / Sublime Text 风格。
+ */
+
+/* ============================================================
+ * CSS 变量定义 - 暗色主题色板
+ * ============================================================ */
+:root {
+  --bg-primary: #1e1e1e;
+  --bg-secondary: #252526;
+  --bg-tertiary: #2d2d30;
+  --bg-hover: #3e3e42;
+  --bg-active: #094771;
+  --bg-input: #3c3c3c;
+  --bg-sidebar: #252526;
+  --bg-tab-active: #1e1e1e;
+  --bg-tab-inactive: #2d2d30;
+  --bg-find: #333333;
+
+  --text-primary: #cccccc;
+  --text-secondary: #999999;
+  --text-muted: #666666;
+  --text-highlight: #ffffff;
+
+  --border-color: #3e3e42;
+  --border-active: #007acc;
+
+  --accent: #007acc;
+  --accent-hover: #1a8ad4;
+  --danger: #f44747;
+  --warning: #cca700;
+  --success: #4ec9b0;
+
+  --scrollbar-size: 8px;
+  --tab-height: 36px;
+  --toolbar-height: 36px;
+  --statusbar-height: 24px;
+  --sidebar-width: 260px;
+
+  --font-mono: 'Cascadia Code', 'Fira Code', 'JetBrains Mono', Consolas, 'Courier New', monospace;
+  --font-ui: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+}
+
+/* ============================================================
+ * 基础重置
+ * ============================================================ */
+*,
+*::before,
+*::after {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html, body, #app {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  font-family: var(--font-ui);
+  font-size: 13px;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* ============================================================
+ * 滚动条样式（暗色主题）
+ * ============================================================ */
+::-webkit-scrollbar {
+  width: var(--scrollbar-size);
+  height: var(--scrollbar-size);
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(121, 121, 121, 0.4);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(100, 100, 100, 0.6);
+}
+
+::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+/* ============================================================
+ * 通用组件样式
+ * ============================================================ */
+
+/* 按钮基础样式 */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 4px 12px;
+  border: 1px solid var(--border-color);
+  border-radius: 3px;
+  background: var(--bg-input);
+  color: var(--text-primary);
+  font-size: 12px;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+  user-select: none;
+}
+
+.btn:hover {
+  background: var(--bg-hover);
+}
+
+.btn:active {
+  background: var(--bg-active);
+}
+
+.btn-primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+
+.btn-primary:hover {
+  background: var(--accent-hover);
+}
+
+.btn-sm {
+  padding: 2px 8px;
+  font-size: 11px;
+}
+
+/* 输入框基础样式 */
+.input {
+  padding: 4px 8px;
+  border: 1px solid var(--border-color);
+  border-radius: 3px;
+  background: var(--bg-input);
+  color: var(--text-primary);
+  font-size: 12px;
+  font-family: var(--font-ui);
+  outline: none;
+  transition: border-color 0.15s;
+}
+
+.input:focus {
+  border-color: var(--accent);
+}
+
+.input::placeholder {
+  color: var(--text-muted);
+}
+
+/* 选择框样式 */
+.select {
+  padding: 4px 8px;
+  border: 1px solid var(--border-color);
+  border-radius: 3px;
+  background: var(--bg-input);
+  color: var(--text-primary);
+  font-size: 12px;
+  outline: none;
+  cursor: pointer;
+}
+
+.select:focus {
+  border-color: var(--accent);
+}
+
+/* 工具提示 */
+.tooltip {
+  position: relative;
+}
+
+.tooltip::after {
+  content: attr(data-tip);
+  position: absolute;
+  bottom: -28px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 2px 8px;
+  background: #000;
+  color: #fff;
+  font-size: 11px;
+  border-radius: 3px;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.15s;
+  z-index: 1000;
+}
+
+.tooltip:hover::after {
+  opacity: 1;
+}

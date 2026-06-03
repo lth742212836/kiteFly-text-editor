@@ -1,0 +1,84 @@
+{
+  "name": "txt-edit",
+  "version": "1.0.0",
+  "description": "A cross-platform text editor built with Electron + Vue3, supporting multi-tab editing, find/replace, and encoding features.",
+  "main": "electron/main.js",
+  "scripts": {
+    "dev": "vite",
+    "build:vue": "vite build",
+    "electron:dev": "node scripts/dev.js",
+    "electron:build:mac": "npm run build:vue && electron-builder --mac",
+    "electron:build:win": "npm run build:vue && electron-builder --win",
+    "electron:build:linux": "npm run build:vue && electron-builder --linux",
+    "electron:build:all": "npm run build:vue && electron-builder --mac --win --linux"
+  },
+  "build": {
+    "appId": "com.txtedit.app",
+    "productName": "TxtEdit",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "dist/**/*",
+      "electron/**/*",
+      "package.json"
+    ],
+    "mac": {
+      "category": "public.app-category.productivity",
+      "target": [
+        {
+          "target": "dmg",
+          "arch": [
+            "x64",
+            "arm64"
+          ]
+        }
+      ]
+    },
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ]
+    },
+    "linux": {
+      "target": [
+        {
+          "target": "AppImage",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
+          "target": "deb",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "category": "Utility"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true
+    }
+  },
+  "devDependencies": {
+    "@vitejs/plugin-vue": "^5.0.4",
+    "electron": "^30.0.1",
+    "electron-builder": "^24.13.3",
+    "vite": "^5.2.11"
+  },
+  "dependencies": {
+    "iconv-lite": "^0.6.3",
+    "jschardet": "^3.1.4",
+    "monaco-editor": "^0.47.0",
+    "pinia": "^2.1.7",
+    "vue": "^3.4.27",
+    "vue-router": "^4.3.2"
+  }
+}

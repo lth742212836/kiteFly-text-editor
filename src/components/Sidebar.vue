@@ -1,0 +1,219 @@
+<!--
+  Sidebar.vue - 侧边栏组件
+  
+  显示文件浏览器和最近打开的文件列表。
+  支持：
+  - 文件夹内容浏览
+  - 点击文件在编辑器中打开
+  - 最近打开文件快捷访问
+-->
+<template>
+  <div class="sidebar">
+    <!-- 最近打开的文件 -->
+    <div class="sidebar-section">
+      <div class="section-header">
+        <span class="section-title">最近打开</span>
+      </div>
+      <div class="section-content">
+        <div v-if="sidebarStore.recentFiles.length === 0" class="empty-hint">
+          暂无最近文件
+        </div>
+        <div
+          v-for="filePath in sidebarStore.recentFiles"
+          :key="filePath"
+          class="file-item"
+          :title="filePath"
+          @click="openFile(filePath)"
+        >
+          <span class="file-icon">📄</span>
+          <span class="file-name">{{ getFileName(filePath) }}</span>
+          <span class="file-path">{{ getDirName(filePath) }}</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 文件夹浏览器 -->
+    <div v-if="sidebarStore.currentFolder" class="sidebar-section">
+      <div class="section-header">
+        <span class="section-title">文件浏览</span>
+        <span class="folder-path">{{ sidebarStore.currentFolder }}</span>
+      </div>
+      <div class="section-content">
+        <div v-if="sidebarStore.folderEntries.length === 0" class="empty-hint">
+          文件夹为空
+        </div>
+        <div
+          v-for="entry in sidebarStore.folderEntries"
+          :key="entry.path"
+          class="file-item"
+          :title="entry.name"
+          @click="handleEntryClick(entry)"
+        >
+          <span class="file-icon">{{ entry.isDirectory ? '📁' : '📄' }}</span>
+          <span class="file-name">{{ entry.name }}</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</template>
+
+<script setup>
+/**
+ * Sidebar.vue - 侧边栏组件逻辑
+ */
+import { inject } from 'vue'
+import { useSidebarStore } from '@/stores/sidebar'
+
+const sidebarStore = useSidebarStore()
+const editorPanelRef = inject('editorPanelRef')
+
+/**
+ * 从文件路径提取文件名
+ * @param {string} filePath - 文件绝对路径
+ * @returns {string} 文件名
+ */
+function getFileName(filePath) {
+  return filePath.split(/[/\\]/).pop()
+}
+
+/**
+ * 从文件路径提取目录名
+ * @param {string} filePath - 文件绝对路径
+ * @returns {string} 目录路径
+ */
+function getDirName(filePath) {
+  const parts = filePath.split(/[/\\]/)
+  parts.pop()
+  return parts.join('/')
+}
+
+/**
+ * 在编辑器中打开文件
+ * @param {string} filePath - 文件路径
+ */
+async function openFile(filePath) {
+  editorPanelRef.value?.openFiles([filePath])
+}
+
+/**
+ * 处理侧边栏文件/文件夹点击
+ * @param {Object} entry - 文件/文件夹条目
+ */
+async function handleEntryClick(entry) {
+  if (entry.isDirectory) {
+    // 进入子目录
+    sidebarStore.setCurrentFolder(entry.path)
+    try {
+      const result = await window.electronAPI.listDir(entry.path)
+      if (result.success) {
+        sidebarStore.setFolderEntries(result.entries)
+      }
+    } catch (e) {
+      console.error('加载文件夹失败:', e)
+    }
+  } else if (entry.isTextFile) {
+    // 打开文本文件
+    openFile(entry.path)
+  }
+}
+</script>
+
+<style scoped>
+.sidebar {
+  width: var(--sidebar-width);
+  min-width: var(--sidebar-width);
+  background: var(--bg-sidebar);
+  border-right: 1px solid var(--border-color);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  user-select: none;
+}
+
+.sidebar-section {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  overflow: hidden;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.sidebar-section:last-child {
+  border-bottom: none;
+}
+
+.section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--border-color);
+  flex-shrink: 0;
+}
+
+.section-title {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.folder-path {
+  font-size: 10px;
+  color: var(--text-muted);
+  max-width: 150px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.section-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 4px 0;
+}
+
+.empty-hint {
+  padding: 16px;
+  text-align: center;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.file-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 12px;
+  cursor: pointer;
+  transition: background 0.15s;
+  font-size: 12px;
+}
+
+.file-item:hover {
+  background: var(--bg-hover);
+}
+
+.file-icon {
+  font-size: 14px;
+  flex-shrink: 0;
+}
+
+.file-name {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text-primary);
+}
+
+.file-path {
+  font-size: 10px;
+  color: var(--text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 120px;
+}
+</style>
