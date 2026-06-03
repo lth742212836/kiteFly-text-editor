@@ -146,48 +146,48 @@ async function handleEntryClick(entry) {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 8px 12px;
-  border-bottom: 1px solid var(--border-color);
+  padding: 8px 12px 4px;
   flex-shrink: 0;
 }
 
 .section-title {
-  font-size: 11px;
-  font-weight: 600;
-  color: var(--text-secondary);
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--text-muted);
   text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.8px;
 }
 
 .folder-path {
   font-size: 10px;
   color: var(--text-muted);
-  max-width: 150px;
+  max-width: 140px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  opacity: 0.6;
 }
 
 .section-content {
   flex: 1;
   overflow-y: auto;
-  padding: 4px 0;
+  padding: 2px 0;
 }
 
 .empty-hint {
-  padding: 16px;
+  padding: 20px 12px;
   text-align: center;
-  font-size: 12px;
+  font-size: 11px;
   color: var(--text-muted);
 }
 
 .file-item {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 4px 12px;
+  gap: 6px;
+  padding: 3px 12px;
   cursor: pointer;
-  transition: background 0.15s;
+  transition: background 0.1s;
   font-size: 12px;
 }
 
@@ -196,8 +196,9 @@ async function handleEntryClick(entry) {
 }
 
 .file-icon {
-  font-size: 14px;
+  font-size: 13px;
   flex-shrink: 0;
+  opacity: 0.8;
 }
 
 .file-name {
@@ -214,6 +215,7 @@ async function handleEntryClick(entry) {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  max-width: 120px;
+  max-width: 110px;
+  opacity: 0.5;
 }
 </style>

@@ -30,32 +30,6 @@
     </div>
 
     <!-- 编码选择器（仅在有活动标签页时显示） -->
-    <div v-if="tabsStore.activeTab" class="encoding-bar">
-      <span class="encoding-label">编码:</span>
-      <select
-        class="encoding-select"
-        :value="tabsStore.activeTab.encoding"
-        @change="onEncodingChange($event.target.value)"
-      >
-        <option value="utf-8">UTF-8</option>
-        <option value="utf-16le">UTF-16 LE</option>
-        <option value="utf-16be">UTF-16 BE</option>
-        <option value="gbk">GBK / GB2312</option>
-        <option value="big5">Big5</option>
-        <option value="shift_jis">Shift_JIS</option>
-        <option value="euc-jp">EUC-JP</option>
-        <option value="euc-kr">EUC-KR</option>
-        <option value="iso-8859-1">ISO-8859-1 (Latin-1)</option>
-        <option value="windows-1252">Windows-1252</option>
-      </select>
-      <!-- 大文件提示标签 -->
-      <span v-if="tabsStore.activeTab.isLargeFile" class="large-file-badge" :title="'文件大小: ' + formatFileSize(tabsStore.activeTab.fileSize)">
-        {{ tabsStore.activeTab.isHugeFile ? '超大文件' : '大文件' }} {{ formatFileSize(tabsStore.activeTab.fileSize) }}
-      </span>
-      <span v-if="tabsStore.activeTab.filePath" class="encoding-file" :title="tabsStore.activeTab.filePath">
-        {{ tabsStore.activeTab.filePath }}
-      </span>
-    </div>
 
     <!-- Monaco Editor 容器 -->
     <div ref="editorContainer" class="editor-container"></div>
@@ -178,18 +152,6 @@ function getEffectiveOptions(tab) {
   }
 }
 
-/**
- * 格式化文件大小为可读字符串
- * @param {number} bytes - 字节数
- * @returns {string} 格式化后的大小字符串
- */
-function formatFileSize(bytes) {
-  if (bytes < 1024) return bytes + ' B'
-  if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB'
-  if (bytes < 1024 * 1024 * 1024) return (bytes / (1024 * 1024)).toFixed(1) + ' MB'
-  return (bytes / (1024 * 1024 * 1024)).toFixed(2) + ' GB'
-}
-
 onMounted(() => {
   // 初始化 Monaco Editor（nextTick 确保 DOM 渲染完成）
   nextTick(() => {
@@ -306,13 +268,22 @@ function updateEditorContent() {
 
 /**
  * 打开文件（支持批量）
- * 读取文件内容并检测大文件以启用优化策略
+ * 已打开的文件直接切换标签页（跳过 IPC），未打开的文件才读取内容
+ * 大文件自动启用优化策略
  * 
  * @param {string[]} filePaths - 文件路径数组
  */
 async function openFiles(filePaths) {
   for (const filePath of filePaths) {
     try {
+      // 优先检查文件是否已在标签页中打开，已打开则直接切换（跳过 IPC）
+      if (tabsStore.activateTabByPath(filePath)) {
+        await nextTick()
+        updateEditorContent()
+        continue
+      }
+
+      // 文件未打开，通过 IPC 读取文件内容
       const result = await window.electronAPI.readFile(filePath)
       if (result.success) {
         const fileSize = result.fileSize || Buffer.byteLength(result.content, 'utf-8')
@@ -386,16 +357,6 @@ function redo() {
   editor?.trigger('keyboard', 'redo', null)
 }
 
-/**
- * 编码切换处理
- * @param {string} encoding - 新编码
- */
-function onEncodingChange(encoding) {
-  if (tabsStore.activeTabId) {
-    tabsStore.updateTabEncoding(tabsStore.activeTabId, encoding)
-  }
-}
-
 // 暴露方法给父组件
 defineExpose({
   openFiles,
@@ -424,93 +385,46 @@ defineExpose({
 
 .welcome-content {
   text-align: center;
-  opacity: 0.7;
 }
 
 .welcome-title {
-  font-size: 48px;
-  font-weight: 300;
+  font-size: 42px;
+  font-weight: 200;
   color: var(--text-primary);
-  letter-spacing: 4px;
-  margin-bottom: 8px;
+  letter-spacing: 6px;
+  margin-bottom: 6px;
+  opacity: 0.85;
 }
 
 .welcome-subtitle {
-  font-size: 14px;
+  font-size: 13px;
   color: var(--text-secondary);
-  margin-bottom: 32px;
+  margin-bottom: 28px;
+  opacity: 0.6;
 }
 
 .welcome-shortcuts {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 6px;
+  align-items: center;
 }
 
 .shortcut-item {
-  font-size: 13px;
-  color: var(--text-secondary);
+  font-size: 12px;
+  color: var(--text-muted);
 }
 
 .shortcut-item kbd {
   display: inline-block;
-  padding: 2px 8px;
-  background: var(--bg-input);
-  border: 1px solid var(--border-color);
-  border-radius: 3px;
-  font-size: 12px;
-  font-family: var(--font-mono);
-  color: var(--text-primary);
-  margin-right: 8px;
-}
-
-.encoding-bar {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 2px 12px;
-  background: var(--bg-tertiary);
-  border-bottom: 1px solid var(--border-color);
-  flex-shrink: 0;
-  user-select: none;
-}
-
-.encoding-label {
-  font-size: 11px;
-  color: var(--text-muted);
-}
-
-.encoding-select {
   padding: 1px 6px;
-  border: 1px solid var(--border-color);
-  border-radius: 3px;
   background: var(--bg-input);
-  color: var(--text-primary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
   font-size: 11px;
-  outline: none;
-  cursor: pointer;
-}
-
-.large-file-badge {
-  display: inline-block;
-  padding: 0 6px;
-  border-radius: 3px;
-  background: var(--warning);
-  color: #000;
-  font-size: 10px;
-  font-weight: 600;
-  line-height: 18px;
-  white-space: nowrap;
-}
-
-.encoding-file {
-  flex: 1;
-  font-size: 11px;
-  color: var(--text-muted);
-  text-align: right;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  font-family: var(--font-mono);
+  color: var(--text-secondary);
+  margin-right: 6px;
 }
 
 .editor-container {

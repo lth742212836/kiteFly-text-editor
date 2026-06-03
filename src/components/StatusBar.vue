@@ -16,9 +16,24 @@
         行 {{ cursorPosition.line }}, 列 {{ cursorPosition.column }}
       </span>
 
-      <!-- 文件编码 -->
+      <!-- 文件编码（可交互下拉选择） -->
       <span class="status-item" v-if="tabsStore.activeTab">
-        {{ tabsStore.activeTab.encoding.toUpperCase() }}
+        <select
+          class="encoding-select"
+          :value="tabsStore.activeTab.encoding"
+          @change="onEncodingChange($event.target.value)"
+        >
+          <option value="utf-8">UTF-8</option>
+          <option value="utf-16le">UTF-16 LE</option>
+          <option value="utf-16be">UTF-16 BE</option>
+          <option value="gbk">GBK / GB2312</option>
+          <option value="big5">Big5</option>
+          <option value="shift_jis">Shift_JIS</option>
+          <option value="euc-jp">EUC-JP</option>
+          <option value="euc-kr">EUC-KR</option>
+          <option value="iso-8859-1">ISO-8859-1 (Latin-1)</option>
+          <option value="windows-1252">Windows-1252</option>
+        </select>
       </span>
 
       <!-- 语言模式 -->
@@ -120,6 +135,16 @@ function attachEditorListener() {
     cursorPosition.value = { line: e.position.lineNumber, column: e.position.column }
   })
 }
+
+/**
+ * 编码切换处理
+ * @param {string} encoding - 新编码
+ */
+function onEncodingChange(encoding) {
+  if (tabsStore.activeTabId) {
+    tabsStore.updateTabEncoding(tabsStore.activeTabId, encoding)
+  }
+}
 </script>
 
 <style scoped>
@@ -129,8 +154,8 @@ function attachEditorListener() {
   justify-content: space-between;
   height: var(--statusbar-height);
   background: var(--accent);
-  padding: 0 12px;
-  font-size: 12px;
+  padding: 0 10px;
+  font-size: 11px;
   flex-shrink: 0;
   user-select: none;
 }
@@ -139,20 +164,47 @@ function attachEditorListener() {
 .status-right {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 0;
 }
 
 .status-item {
   padding: 0 8px;
   color: #ffffff;
   white-space: nowrap;
-  font-size: 12px;
+  font-size: 11px;
+  opacity: 0.85;
 }
 
 .status-item.file-path {
-  max-width: 400px;
+  max-width: 360px;
   overflow: hidden;
   text-overflow: ellipsis;
-  opacity: 0.8;
+  opacity: 0.65;
+}
+
+.encoding-select {
+  padding: 0 4px;
+  border: none;
+  border-radius: 3px;
+  background: #ffffff;
+  color: #333333;
+  font-size: 11px;
+  outline: none;
+  cursor: pointer;
+  -webkit-appearance: none;
+  appearance: none;
+  padding-right: 12px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='5' viewBox='0 0 8 5'%3E%3Cpath fill='%23333333' d='M0 0l4 5 4-5z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 2px center;
+}
+
+.encoding-select:hover {
+  background: #f0f0f0;
+}
+
+.encoding-select option {
+  background: #ffffff;
+  color: #333333;
 }
 </style>

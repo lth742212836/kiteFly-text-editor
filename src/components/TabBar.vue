@@ -139,16 +139,16 @@ function closeAllTabs() {
   display: flex;
   align-items: center;
   gap: 6px;
-  padding: 0 12px;
-  min-width: 120px;
-  max-width: 200px;
+  padding: 0 10px;
+  min-width: 100px;
+  max-width: 180px;
   height: 100%;
   background: var(--bg-tab-inactive);
   border-right: 1px solid var(--border-color);
   color: var(--text-secondary);
   font-size: 12px;
   cursor: pointer;
-  transition: background 0.15s;
+  transition: background 0.12s;
   position: relative;
 }
 
@@ -159,15 +159,16 @@ function closeAllTabs() {
 .tab-item.active {
   background: var(--bg-tab-active);
   color: var(--text-primary);
-  border-bottom: 2px solid var(--accent);
+  box-shadow: inset 0 -2px 0 var(--accent);
 }
 
 .tab-dot {
-  width: 8px;
-  height: 8px;
+  width: 7px;
+  height: 7px;
   border-radius: 50%;
   background: transparent;
   flex-shrink: 0;
+  transition: background 0.15s;
 }
 
 .tab-dot.modified {
@@ -186,17 +187,17 @@ function closeAllTabs() {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 18px;
-  height: 18px;
+  width: 16px;
+  height: 16px;
   border: none;
-  border-radius: 3px;
+  border-radius: var(--radius-sm);
   background: transparent;
   color: var(--text-muted);
-  font-size: 14px;
+  font-size: 13px;
   cursor: pointer;
   flex-shrink: 0;
   opacity: 0;
-  transition: opacity 0.15s, background 0.15s;
+  transition: opacity 0.12s, background 0.12s;
 }
 
 .tab-item:hover .tab-close,
@@ -213,20 +214,20 @@ function closeAllTabs() {
 .context-menu {
   position: fixed;
   z-index: 1000;
-  min-width: 150px;
+  min-width: 140px;
   background: var(--bg-secondary);
   border: 1px solid var(--border-color);
-  border-radius: 4px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+  border-radius: var(--radius);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.6);
   padding: 4px 0;
 }
 
 .context-menu-item {
-  padding: 6px 16px;
+  padding: 5px 14px;
   font-size: 12px;
   color: var(--text-primary);
   cursor: pointer;
-  transition: background 0.15s;
+  transition: background 0.1s;
 }
 
 .context-menu-item:hover {

@@ -162,8 +162,8 @@ npm run electron:build:all
 | 快捷键 | 功能 |
 |--------|------|
 | `F12` / `Ctrl + Shift + I` | 切换开发者工具 |
-| `Ctrl + R` | 重新加载窗口 |
-| `Ctrl + Shift + R` | 强制重新加载 |
+| `Ctrl + Shift + F5` | 重新加载窗口 |
+| `Ctrl + Shift + Alt + F5` | 强制重新加载 |
 
 ### 应用级（macOS）
 

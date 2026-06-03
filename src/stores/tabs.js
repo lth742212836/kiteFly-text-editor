@@ -227,6 +227,22 @@ export const useTabsStore = defineStore('tabs', () => {
   }
 
   /**
+   * 根据文件路径查找已打开的标签页并切换
+   * 用于侧边栏点击已打开文件时快速切换，避免不必要的 IPC 文件读取
+   * 
+   * @param {string} filePath - 文件路径
+   * @returns {boolean} 是否找到并切换成功
+   */
+  function activateTabByPath(filePath) {
+    const existingTab = tabs.value.find(t => t.filePath === filePath)
+    if (existingTab) {
+      activeTabId.value = existingTab.id
+      return true
+    }
+    return false
+  }
+
+  /**
    * 更新标签页内容
    * 自动路由到大文件或普通存储
    * 
@@ -354,6 +370,7 @@ export const useTabsStore = defineStore('tabs', () => {
     openFileTab,
     closeTab,
     setActiveTab,
+    activateTabByPath,
     getTabContent,
     setTabContent,
     updateTabContent,

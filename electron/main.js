@@ -282,8 +282,16 @@ function setApplicationMenu() {
           click: () => sendToRenderer('menu-toggle-sidebar'),
         },
         { type: 'separator' },
-        { role: 'reload', label: '重新加载' },
-        { role: 'forceReload', label: '强制重新加载' },
+        {
+          label: '重新加载',
+          accelerator: 'CmdOrCtrl+Shift+F5',
+          click: () => mainWindow?.webContents.reload(),
+        },
+        {
+          label: '强制重新加载',
+          accelerator: 'CmdOrCtrl+Shift+Alt+F5',
+          click: () => mainWindow?.webContents.reloadIgnoringCache(),
+        },
         { role: 'toggleDevTools', label: '开发者工具' },
         { type: 'separator' },
         { role: 'resetZoom', label: '重置缩放' },

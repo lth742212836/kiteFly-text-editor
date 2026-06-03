@@ -193,6 +193,14 @@ const menuHandlers = {
   'menu-toggle-sidebar': () => {
     sidebarStore.toggle()
   },
+  // 剪切/复制/粘贴/撤销/重做/全选：使用浏览器原生行为
+  // Monaco 编辑器聚焦时会自行处理，普通 input 聚焦时由 document.execCommand 兜底
+  'menu-cut': () => { document.execCommand('cut') },
+  'menu-copy': () => { document.execCommand('copy') },
+  'menu-paste': () => { document.execCommand('paste') },
+  'menu-undo': () => { document.execCommand('undo') },
+  'menu-redo': () => { document.execCommand('redo') },
+  'menu-select-all': () => { document.execCommand('selectAll') },
   'open-files': (filePaths) => {
     editorPanelRef.value?.openFiles(filePaths)
   },

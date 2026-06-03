@@ -297,14 +297,14 @@ function clearFind() {
 .find-panel {
   background: var(--bg-find);
   border-bottom: 1px solid var(--border-color);
-  padding: 4px 8px;
+  padding: 3px 6px;
   flex-shrink: 0;
 }
 
 .find-row {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 3px;
   margin-bottom: 2px;
 }
 
@@ -314,15 +314,15 @@ function clearFind() {
 
 .find-input {
   flex: 1;
-  padding: 3px 8px;
+  padding: 2px 6px;
   border: 1px solid var(--border-color);
-  border-radius: 3px;
+  border-radius: var(--radius-sm);
   background: var(--bg-input);
   color: var(--text-primary);
   font-size: 12px;
   font-family: var(--font-mono);
   outline: none;
-  min-width: 200px;
+  min-width: 180px;
 }
 
 .find-input:focus {
@@ -336,7 +336,7 @@ function clearFind() {
 .find-count {
   font-size: 11px;
   color: var(--text-secondary);
-  min-width: 40px;
+  min-width: 36px;
   text-align: center;
   user-select: none;
 }
@@ -345,15 +345,15 @@ function clearFind() {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 26px;
-  height: 24px;
+  min-width: 22px;
+  height: 22px;
   border: 1px solid transparent;
-  border-radius: 3px;
+  border-radius: var(--radius-sm);
   background: transparent;
   color: var(--text-secondary);
-  font-size: 12px;
+  font-size: 11px;
   cursor: pointer;
-  transition: background 0.15s, border-color 0.15s;
+  transition: background 0.1s, border-color 0.1s;
   flex-shrink: 0;
 }
 
@@ -368,14 +368,14 @@ function clearFind() {
 }
 
 .find-close {
-  font-size: 16px;
-  margin-left: 4px;
+  font-size: 14px;
+  margin-left: 2px;
 }
 
 .replace-btn,
 .replace-all-btn {
   width: auto;
-  padding: 0 8px;
+  padding: 0 6px;
   font-size: 11px;
   white-space: nowrap;
 }
