@@ -180,7 +180,7 @@ function onEncodingChange(encoding) {
 
 .status-item {
   padding: 0 8px;
-  color: #ffffff;
+  color: var(--status-text);
   white-space: nowrap;
   font-size: 11px;
   opacity: 0.85;
@@ -197,8 +197,8 @@ function onEncodingChange(encoding) {
   padding: 0 4px;
   border: none;
   border-radius: 3px;
-  background: #ffffff;
-  color: #333333;
+  background: var(--encoding-select-bg);
+  color: var(--encoding-select-color);
   font-size: 11px;
   outline: none;
   cursor: pointer;
@@ -211,7 +211,7 @@ function onEncodingChange(encoding) {
 }
 
 .encoding-select:hover {
-  background: #f0f0f0;
+  background: var(--encoding-select-hover);
 }
 
 .encoding-select option {

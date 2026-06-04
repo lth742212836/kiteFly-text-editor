@@ -131,6 +131,32 @@
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><line x1="9" y1="3" x2="9" y2="21"/></svg>
         </button>
       </div>
+
+      <div class="toolbar-separator"></div>
+
+      <!-- ======== 主题切换 ======== -->
+      <div class="toolbar-group" data-group="主题">
+        <button
+          class="toolbar-btn theme-btn"
+          aria-label="切换主题"
+          :title="'当前: ' + currentThemeLabel + ' — 点击切换'"
+          @click="onToggleTheme"
+          @mouseenter="onBtnHover($event, '切换主题', currentThemeLabel)"
+          @mouseleave="onBtnLeave"
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <template v-if="themeStore.current === 'dark'">
+              <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+            </template>
+            <template v-else-if="themeStore.current === 'light'">
+              <circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+            </template>
+            <template v-else>
+              <path d="M2 12h2"/><path d="M20 12h2"/><path d="M12 2v2"/><path d="M12 20v2"/><circle cx="12" cy="12" r="4"/>
+            </template>
+          </svg>
+        </button>
+      </div>
     </div>
 
     <!-- 自定义悬浮提示 -->
@@ -154,16 +180,25 @@
  * 按钮按功能分组：文件、保存、编辑、搜索、视图
  * 悬浮 1 秒后显示自定义 tooltip（含功能名 + 快捷键）
  */
-import { inject, ref, reactive } from 'vue'
+import { inject, ref, reactive, computed } from 'vue'
 import { useTabsStore } from '@/stores/tabs'
 import { useSidebarStore } from '@/stores/sidebar'
+import { useThemeStore, THEMES } from '@/stores/theme'
 
 const tabsStore = useTabsStore()
 const sidebarStore = useSidebarStore()
+const themeStore = useThemeStore()
+
+/** 当前主题的中文标签 */
+const currentThemeLabel = computed(() => {
+  const theme = THEMES.find(t => t.id === themeStore.current)
+  return theme ? theme.label : '黑夜'
+})
 
 // 注入编辑器面板引用
 const editorPanelRef = inject('editorPanelRef')
 const showFindPanel = inject('showFindPanel')
+const findInitialText = inject('findInitialText')
 
 // 平台检测：macOS 用 ⌘，其他平台用 Ctrl
 const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0
@@ -250,17 +285,30 @@ function onRedo() {
 
 /** 切换查找面板 */
 function onFind() {
+  if (!showFindPanel.value) {
+    findInitialText.value = editorPanelRef.value?.getSelectedText() || ''
+  }
   showFindPanel.value = !showFindPanel.value
 }
 
 /** 切换替换面板 */
 function onReplace() {
+  if (!showFindPanel.value) {
+    findInitialText.value = editorPanelRef.value?.getSelectedText() || ''
+  }
   showFindPanel.value = !showFindPanel.value
 }
 
 /** 切换侧边栏 */
 function onToggleSidebar() {
   sidebarStore.toggle()
+}
+
+/** 循环切换主题：黑夜 → 白天 → 护眼 → 黑夜 */
+function onToggleTheme() {
+  const idx = THEMES.findIndex(t => t.id === themeStore.current)
+  const next = THEMES[(idx + 1) % THEMES.length]
+  themeStore.setTheme(next.id)
 }
 </script>
 
@@ -345,8 +393,8 @@ function onToggleSidebar() {
   align-items: center;
   gap: 8px;
   padding: 4px 10px;
-  background: #2d2d2d;
-  border: 1px solid #444;
+  background: var(--tooltip-bg);
+  border: 1px solid var(--tooltip-border);
   border-radius: 4px;
   font-size: 12px;
   line-height: 1.5;
@@ -356,13 +404,13 @@ function onToggleSidebar() {
 }
 
 .tooltip-label {
-  color: #e0e0e0;
+  color: var(--tooltip-label);
 }
 
 .tooltip-shortcut {
-  color: #999;
+  color: var(--tooltip-shortcut);
   padding: 0 4px;
-  background: #3a3a3a;
+  background: var(--tooltip-shortcut-bg);
   border-radius: 3px;
   font-family: var(--font-mono);
   font-size: 11px;

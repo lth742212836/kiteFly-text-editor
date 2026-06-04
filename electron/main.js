@@ -464,6 +464,14 @@ function registerIpcHandlers() {
   })
 
   /**
+   * 将文件添加到最近文件列表顶部（更新排序，不读取文件内容）
+   */
+  ipcMain.handle('app:addRecentFile', (_, filePath) => {
+    addToRecentFiles(filePath)
+    return true
+  })
+
+  /**
    * 获取文件夹下的文件列表
    */
   ipcMain.handle('fs:listDir', async (_, dirPath) => {
@@ -504,6 +512,18 @@ function registerIpcHandlers() {
     try {
       const buffer = fs.readFileSync(filePath)
       return { success: true, encoding: detectEncoding(buffer) }
+    } catch (error) {
+      return { success: false, error: error.message }
+    }
+  })
+
+  /**
+   * 在系统文件管理器中打开指定路径（文件或文件夹）
+   */
+  ipcMain.handle('shell:showItemInFolder', async (_, filePath) => {
+    try {
+      shell.showItemInFolder(filePath)
+      return { success: true }
     } catch (error) {
       return { success: false, error: error.message }
     }

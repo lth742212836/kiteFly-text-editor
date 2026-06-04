@@ -25,10 +25,30 @@
     <!-- 标签页栏 -->
     <TabBar />
 
-    <!-- 主体区域：侧边栏 + 编辑区 -->
+    <!-- 主体区域：侧边栏 + 分割线 + 编辑区 -->
     <div class="main-area">
       <!-- 侧边栏（可折叠） -->
-      <Sidebar v-if="sidebarStore.visible" />
+      <Sidebar v-if="sidebarStore.visible" :style="sidebarStyle" />
+
+      <!-- 侧边栏折叠后的展开条 -->
+      <div v-else class="sidebar-collapsed-strip" @click="sidebarStore.setVisible(true)" title="展开侧边栏">
+        <svg class="expand-icon" viewBox="0 0 16 16" width="16" height="16" fill="currentColor">
+          <path d="M6 4l4 4-4 4" stroke="currentColor" stroke-width="1.5" fill="none"/>
+        </svg>
+        <div class="strip-label">
+          <span class="strip-char">最</span>
+          <span class="strip-char">近</span>
+          <span class="strip-char">打</span>
+          <span class="strip-char">开</span>
+        </div>
+      </div>
+
+      <!-- 可拖拽分割线 -->
+      <div
+        v-if="sidebarStore.visible"
+        class="resize-handle"
+        @mousedown.prevent="onResizeStart"
+      ></div>
 
       <!-- 编辑区域 -->
       <div class="editor-area">
@@ -70,7 +90,7 @@
  * 
  * 监听主进程菜单事件，协调各子组件之间的交互。
  */
-import { ref, onMounted, onBeforeUnmount, provide } from 'vue'
+import { ref, computed, onMounted, onBeforeUnmount, provide } from 'vue'
 import { useTabsStore } from '@/stores/tabs'
 import { useSidebarStore } from '@/stores/sidebar'
 import ToolBar from '@/components/ToolBar.vue'
@@ -88,6 +108,10 @@ const editorPanelRef = ref(null)
 
 // 查找替换面板显示状态
 const showFindPanel = ref(false)
+
+/** 打开查找面板时，从编辑器获取的选中文本 */
+const findInitialText = ref('')
+provide('findInitialText', findInitialText)
 
 // ============================================================
 // 文件拖拽相关状态与处理
@@ -185,9 +209,11 @@ const menuHandlers = {
     }
   },
   'menu-find': () => {
+    findInitialText.value = editorPanelRef.value?.getSelectedText() || ''
     showFindPanel.value = true
   },
   'menu-replace': () => {
+    findInitialText.value = editorPanelRef.value?.getSelectedText() || ''
     showFindPanel.value = true
   },
   'menu-toggle-sidebar': () => {
@@ -246,6 +272,63 @@ async function loadFolderContents(folderPath) {
   }
 }
 
+// ============================================================
+// 侧边栏拖拽调整宽度
+// ============================================================
+
+/** 侧边栏最小/最大宽度限制（px） */
+const SIDEBAR_MIN_WIDTH = 180
+const SIDEBAR_MAX_WIDTH = 500
+
+/** 当前侧边栏宽度（px），初始值从 CSS 变量读取 */
+const sidebarWidth = ref(260)
+
+/** 侧边栏动态样式 */
+const sidebarStyle = computed(() => ({
+  width: sidebarWidth.value + 'px',
+  minWidth: sidebarWidth.value + 'px',
+}))
+
+/** 拖拽起始状态 */
+let resizeState = null
+
+/**
+ * 开始拖拽分割线
+ * @param {MouseEvent} e
+ */
+function onResizeStart(e) {
+  resizeState = {
+    startX: e.clientX,
+    startWidth: sidebarWidth.value,
+  }
+  document.addEventListener('mousemove', onResizeMove)
+  document.addEventListener('mouseup', onResizeEnd)
+  document.body.style.cursor = 'col-resize'
+  document.body.style.userSelect = 'none'
+}
+
+/**
+ * 拖拽移动中，实时更新侧边栏宽度
+ * @param {MouseEvent} e
+ */
+function onResizeMove(e) {
+  if (!resizeState) return
+  const delta = e.clientX - resizeState.startX
+  const newWidth = Math.max(SIDEBAR_MIN_WIDTH, Math.min(SIDEBAR_MAX_WIDTH, resizeState.startWidth + delta))
+  sidebarWidth.value = newWidth
+}
+
+/**
+ * 拖拽结束，清理事件监听
+ */
+function onResizeEnd() {
+  document.removeEventListener('mousemove', onResizeMove)
+  document.removeEventListener('mouseup', onResizeEnd)
+  document.body.style.cursor = ''
+  document.body.style.userSelect = ''
+  resizeState = null
+}
+
 // 向子组件提供编辑器面板引用
 provide('editorPanelRef', editorPanelRef)
 provide('showFindPanel', showFindPanel)
@@ -272,6 +355,70 @@ provide('showFindPanel', showFindPanel)
   flex: 1;
   overflow: hidden;
   min-width: 0;
+}
+
+/* ============================================================
+   侧边栏可拖拽分割线
+   ============================================================ */
+
+.resize-handle {
+  width: 4px;
+  cursor: col-resize;
+  background: transparent;
+  transition: background 0.15s;
+  flex-shrink: 0;
+  z-index: 10;
+}
+
+.resize-handle:hover {
+  background: var(--accent, #007acc);
+}
+
+/* ============================================================
+   侧边栏折叠后的展开条
+   ============================================================ */
+
+.sidebar-collapsed-strip {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  width: 32px;
+  min-width: 32px;
+  padding: 10px 0;
+  background: var(--bg-sidebar);
+  border-right: 1px solid var(--border-color);
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background 0.15s;
+}
+
+.sidebar-collapsed-strip:hover {
+  background: var(--bg-hover);
+}
+
+.expand-icon {
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+
+.sidebar-collapsed-strip:hover .expand-icon {
+  color: var(--accent);
+}
+
+.strip-label {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
+.strip-char {
+  font-size: 10px;
+  color: var(--text-muted);
+  line-height: 1.3;
+  writing-mode: vertical-rl;
+  text-orientation: upright;
 }
 
 /* ============================================================

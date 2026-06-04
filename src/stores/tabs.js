@@ -84,6 +84,7 @@ export const useTabsStore = defineStore('tabs', () => {
       isLargeFile: false,    // 是否为大文件（>2MB），大文件自动禁用高亮等重功能
       highlightEnabled: true,// 是否启用文本高亮（用户可手动切换）
       fileSize: 0,           // 文件大小（字节）
+      viewState: null,       // 标签页切换前保存的编辑器滚动/光标位置
     }
 
     tabs.value.push(tab)
@@ -147,7 +148,8 @@ export const useTabsStore = defineStore('tabs', () => {
     const fileName = filePath.split(/[/\\]/).pop()
     
     // 大文件检测（>2MB）：内容存非响应式 Map，编辑器自动禁用高亮等重功能
-    const actualSize = fileSize > 0 ? fileSize : Buffer.byteLength(content, 'utf-8')
+    // fileSize 由主进程通过 fs.statSync 提供，无需在渲染进程重复计算避免阻塞
+    const actualSize = fileSize > 0 ? fileSize : (content ? content.length : 0)
     const isLarge = actualSize > LARGE_FILE_THRESHOLD
     
     // 始终检测文件对应的语言模式，语法高亮在编辑器中根据 highlightEnabled 控制
@@ -164,6 +166,7 @@ export const useTabsStore = defineStore('tabs', () => {
       isLargeFile: isLarge,
       highlightEnabled: !isLarge,        // 大文件默认关闭高亮，小文件默认开启
       fileSize: actualSize,
+      viewState: null,                   // 标签页切换前保存的编辑器滚动/光标位置
     }
 
     // 大文件内容存储到非响应式 Map
@@ -317,15 +320,56 @@ export const useTabsStore = defineStore('tabs', () => {
    * @param {string} tabId - 要保留的标签页 ID
    */
   function closeOtherTabs(tabId) {
-    const tab = tabs.value.find(t => t.id === tabId)
-    if (tab) {
-      // 清理被关闭标签页的大文件缓存
-      for (const t of tabs.value) {
-        if (t.id !== tabId && largeFileContents.has(t.id)) {
-          largeFileContents.delete(t.id)
+    const index = tabs.value.findIndex(t => t.id === tabId)
+    if (index === -1) return
+    // 清理被关闭标签页的大文件缓存
+    for (let i = tabs.value.length - 1; i >= 0; i--) {
+      if (i !== index) {
+        if (largeFileContents.has(tabs.value[i].id)) {
+          largeFileContents.delete(tabs.value[i].id)
         }
+        tabs.value.splice(i, 1)
       }
-      tabs.value = [tab]
+    }
+    activeTabId.value = tabId
+  }
+
+  /**
+   * 关闭左侧所有标签页（保留指定标签页及其右侧）
+   * @param {string} tabId - 参考标签页 ID
+   */
+  function closeLeftTabs(tabId) {
+    const index = tabs.value.findIndex(t => t.id === tabId)
+    if (index <= 0) return
+    // 从右往左删除 index 之前的标签页
+    for (let i = index - 1; i >= 0; i--) {
+      if (largeFileContents.has(tabs.value[i].id)) {
+        largeFileContents.delete(tabs.value[i].id)
+      }
+      tabs.value.splice(i, 1)
+    }
+    // 当前 tab 仍在活动状态则保持不变，否则更新
+    if (tabs.value.length > 0) {
+      activeTabId.value = tabs.value[0].id === tabId ? tabId : (tabs.value.find(t => t.id === tabId)?.id || tabs.value[0].id)
+    }
+  }
+
+  /**
+   * 关闭右侧所有标签页（保留指定标签页及其左侧）
+   * @param {string} tabId - 参考标签页 ID
+   */
+  function closeRightTabs(tabId) {
+    const index = tabs.value.findIndex(t => t.id === tabId)
+    if (index === -1 || index >= tabs.value.length - 1) return
+    // 从右往左删除 index 之后的标签页
+    for (let i = tabs.value.length - 1; i > index; i--) {
+      if (largeFileContents.has(tabs.value[i].id)) {
+        largeFileContents.delete(tabs.value[i].id)
+      }
+      tabs.value.splice(i, 1)
+    }
+    // 保持当前活动标签
+    if (!tabs.value.find(t => t.id === activeTabId.value)) {
       activeTabId.value = tabId
     }
   }
@@ -387,6 +431,8 @@ export const useTabsStore = defineStore('tabs', () => {
     toggleHighlight,
     closeAllTabs,
     closeOtherTabs,
+    closeLeftTabs,
+    closeRightTabs,
     // 常量
     LARGE_FILE_THRESHOLD,
   }

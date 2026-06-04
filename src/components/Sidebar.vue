@@ -13,6 +13,13 @@
     <div class="sidebar-section">
       <div class="section-header">
         <span class="section-title">最近打开</span>
+        <button
+          class="collapse-btn"
+          title="收起侧边栏"
+          @click="sidebarStore.setVisible(false)"
+        >
+          <span class="collapse-icon">◂</span>
+        </button>
       </div>
       <div class="section-content">
         <div v-if="sidebarStore.recentFiles.length === 0" class="empty-hint">
@@ -23,7 +30,9 @@
           :key="filePath"
           class="file-item"
           :title="filePath"
+          :class="{ 'file-item--active': contextMenu.targetPath === filePath }"
           @click="openFile(filePath)"
+          @contextmenu.prevent="onContextMenu($event, filePath)"
         >
           <span class="file-icon">📄</span>
           <span class="file-name">{{ getFileName(filePath) }}</span>
@@ -48,13 +57,37 @@
           :key="entry.path"
           class="file-item"
           :title="entry.name"
+          :class="{ 'file-item--active': contextMenu.targetPath === entry.path }"
           @click="handleEntryClick(entry)"
+          @contextmenu.prevent="onContextMenu($event, entry.path, entry.isDirectory)"
         >
           <span class="file-icon">{{ entry.isDirectory ? '📁' : '📄' }}</span>
           <span class="file-name">{{ entry.name }}</span>
         </div>
       </div>
     </div>
+
+    <!-- 右键菜单 -->
+    <Teleport to="body">
+      <div
+        v-if="contextMenu.visible"
+        class="context-menu"
+        :style="{ left: contextMenu.x + 'px', top: contextMenu.y + 'px' }"
+      >
+        <div class="context-menu-item" @click="openInFolder">
+          <span class="context-menu-icon">📂</span>
+          <span>打开文件所在文件夹</span>
+        </div>
+      </div>
+    </Teleport>
+
+    <!-- 点击空白区域关闭右键菜单 -->
+    <div
+      v-if="contextMenu.visible"
+      class="context-menu-backdrop"
+      @click="closeContextMenu"
+      @contextmenu.prevent="closeContextMenu"
+    ></div>
   </div>
 </template>
 
@@ -62,7 +95,7 @@
 /**
  * Sidebar.vue - 侧边栏组件逻辑
  */
-import { inject, ref } from 'vue'
+import { inject, ref, reactive } from 'vue'
 import { useSidebarStore } from '@/stores/sidebar'
 
 const sidebarStore = useSidebarStore()
@@ -70,6 +103,50 @@ const editorPanelRef = inject('editorPanelRef')
 
 /** 正在删除的文件路径，用于阻止 openFile 在删除期间被意外触发 */
 const deletingFile = ref(null)
+
+// ============================================================
+// 右键菜单
+// ============================================================
+
+/** 右键菜单状态 */
+const contextMenu = reactive({
+  visible: false,
+  x: 0,
+  y: 0,
+  targetPath: '',
+  isDirectory: false,
+})
+
+/**
+ * 右键菜单打开事件
+ * @param {MouseEvent} e
+ * @param {string} filePath - 文件路径
+ * @param {boolean} [isDir=false] - 是否为目录
+ */
+function onContextMenu(e, filePath, isDir = false) {
+  contextMenu.visible = true
+  contextMenu.x = e.clientX
+  contextMenu.y = e.clientY
+  contextMenu.targetPath = filePath
+  contextMenu.isDirectory = isDir
+}
+
+/**
+ * 关闭右键菜单
+ */
+function closeContextMenu() {
+  contextMenu.visible = false
+  contextMenu.targetPath = ''
+}
+
+/**
+ * 在系统文件管理器中打开文件所在文件夹
+ */
+async function openInFolder() {
+  if (!contextMenu.targetPath) return
+  await window.electronAPI.showItemInFolder(contextMenu.targetPath)
+  closeContextMenu()
+}
 
 /**
  * 从文件路径提取文件名
@@ -111,9 +188,7 @@ async function removeRecent(event, filePath) {
   event.preventDefault()
   // 设置删除标记，防止 openFile 被意外触发
   deletingFile.value = filePath
-  if (confirm(`确定要从列表中移除 "${getFileName(filePath)}" 吗？`)) {
-    await sidebarStore.removeRecentFile(filePath)
-  }
+  await sidebarStore.removeRecentFile(filePath)
   deletingFile.value = null
 }
 
@@ -142,14 +217,13 @@ async function handleEntryClick(entry) {
 
 <style scoped>
 .sidebar {
-  width: var(--sidebar-width);
-  min-width: var(--sidebar-width);
   background: var(--bg-sidebar);
   border-right: 1px solid var(--border-color);
   display: flex;
   flex-direction: column;
   overflow: hidden;
   user-select: none;
+  flex-shrink: 0;
 }
 
 .sidebar-section {
@@ -178,6 +252,32 @@ async function handleEntryClick(entry) {
   color: var(--text-muted);
   text-transform: uppercase;
   letter-spacing: 0.8px;
+}
+
+.collapse-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  border: none;
+  border-radius: 3px;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+  flex-shrink: 0;
+}
+
+.collapse-btn:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+.collapse-icon {
+  font-size: 10px;
+  line-height: 1;
 }
 
 .folder-path {
@@ -214,7 +314,8 @@ async function handleEntryClick(entry) {
   position: relative;
 }
 
-.file-item:hover {
+.file-item:hover,
+.file-item--active {
   background: var(--bg-hover);
 }
 
@@ -237,12 +338,12 @@ async function handleEntryClick(entry) {
 }
 
 .file-path {
+  flex: 1;
   font-size: 10px;
   color: var(--text-muted);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  max-width: 110px;
   opacity: 0.5;
 }
 
@@ -265,5 +366,47 @@ async function handleEntryClick(entry) {
 .file-remove:hover {
   background: rgba(255, 80, 80, 0.15);
   color: #ff5050;
+}
+
+/* ============================================================
+   右键菜单
+   ============================================================ */
+
+.context-menu-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 9998;
+}
+
+.context-menu {
+  position: fixed;
+  z-index: 9999;
+  min-width: 180px;
+  background: var(--bg-secondary, #252526);
+  border: 1px solid var(--border-color, #3c3c3c);
+  border-radius: 6px;
+  padding: 4px 0;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+}
+
+.context-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 16px;
+  font-size: 12px;
+  color: var(--text-primary, #cccccc);
+  cursor: pointer;
+  transition: background 0.1s;
+}
+
+.context-menu-item:hover {
+  background: var(--accent, #007acc);
+  color: #fff;
+}
+
+.context-menu-icon {
+  font-size: 14px;
+  flex-shrink: 0;
 }
 </style>

@@ -2,13 +2,14 @@
  * src/styles/global.css - 全局样式表
  * 
  * 定义应用级别的样式变量、滚动条样式和基础组件样式。
- * 采用暗色主题，简洁克制的 VS Code 风格。
+ * 通过 data-theme 属性切换三套主题：dark（黑夜）、light（白天）、eye-care（护眼）。
  */
 
 /* ============================================================
- * CSS 变量定义 - 暗色主题色板
+ * CSS 变量定义 - 黑夜主题（默认）
  * ============================================================ */
-:root {
+:root,
+[data-theme="dark"] {
   --bg-primary: #1e1e1e;
   --bg-secondary: #252526;
   --bg-tertiary: #2d2d30;
@@ -34,6 +35,20 @@
   --warning: #cca700;
   --success: #4ec9b0;
 
+  --tooltip-bg: #2d2d2d;
+  --tooltip-border: #444;
+  --tooltip-label: #e0e0e0;
+  --tooltip-shortcut-bg: #3a3a3a;
+  --tooltip-shortcut: #999;
+
+  --status-text: #ffffff;
+  --encoding-select-bg: #ffffff;
+  --encoding-select-color: #333333;
+  --encoding-select-hover: #f0f0f0;
+
+  --scrollbar-thumb: rgba(121, 121, 121, 0.4);
+  --scrollbar-thumb-hover: rgba(100, 100, 100, 0.6);
+
   --scrollbar-size: 8px;
   --tab-height: 34px;
   --toolbar-height: 34px;
@@ -45,6 +60,94 @@
 
   --font-mono: 'Cascadia Code', 'Fira Code', 'JetBrains Mono', Consolas, 'Courier New', monospace;
   --font-ui: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+}
+
+/* ============================================================
+ * CSS 变量定义 - 白天主题
+ * ============================================================ */
+[data-theme="light"] {
+  --bg-primary: #ffffff;
+  --bg-secondary: #f3f3f3;
+  --bg-tertiary: #e8e8e8;
+  --bg-hover: #e0e0e0;
+  --bg-active: #d0e4f7;
+  --bg-input: #ffffff;
+  --bg-sidebar: #f3f3f3;
+  --bg-tab-active: #ffffff;
+  --bg-tab-inactive: #ececec;
+  --bg-find: #f3f3f3;
+
+  --text-primary: #333333;
+  --text-secondary: #666666;
+  --text-muted: #999999;
+  --text-highlight: #000000;
+
+  --border-color: #d4d4d4;
+  --border-active: #007acc;
+
+  --accent: #007acc;
+  --accent-hover: #1a8ad4;
+  --danger: #e51400;
+  --warning: #bf8803;
+  --success: #388a34;
+
+  --tooltip-bg: #ffffff;
+  --tooltip-border: #d4d4d4;
+  --tooltip-label: #333333;
+  --tooltip-shortcut-bg: #e8e8e8;
+  --tooltip-shortcut: #666666;
+
+  --status-text: #ffffff;
+  --encoding-select-bg: #ffffff;
+  --encoding-select-color: #333333;
+  --encoding-select-hover: #f0f0f0;
+
+  --scrollbar-thumb: rgba(100, 100, 100, 0.3);
+  --scrollbar-thumb-hover: rgba(100, 100, 100, 0.5);
+}
+
+/* ============================================================
+ * CSS 变量定义 - 护眼主题
+ * ============================================================ */
+[data-theme="eye-care"] {
+  --bg-primary: #c7edcc;
+  --bg-secondary: #d4f0d8;
+  --bg-tertiary: #bfe6c5;
+  --bg-hover: #a8dbb0;
+  --bg-active: #8ecf98;
+  --bg-input: #ffffff;
+  --bg-sidebar: #d4f0d8;
+  --bg-tab-active: #c7edcc;
+  --bg-tab-inactive: #bfe6c5;
+  --bg-find: #d4f0d8;
+
+  --text-primary: #2d4a32;
+  --text-secondary: #4a6b50;
+  --text-muted: #7a9a7e;
+  --text-highlight: #1a2e1f;
+
+  --border-color: #a8dbb0;
+  --border-active: #4a9d5a;
+
+  --accent: #4a9d5a;
+  --accent-hover: #5cb868;
+  --danger: #d94a4a;
+  --warning: #b8860b;
+  --success: #388a34;
+
+  --tooltip-bg: #ffffff;
+  --tooltip-border: #a8dbb0;
+  --tooltip-label: #2d4a32;
+  --tooltip-shortcut-bg: #d4f0d8;
+  --tooltip-shortcut: #4a6b50;
+
+  --status-text: #ffffff;
+  --encoding-select-bg: #ffffff;
+  --encoding-select-color: #333333;
+  --encoding-select-hover: #f0f0f0;
+
+  --scrollbar-thumb: rgba(74, 157, 90, 0.3);
+  --scrollbar-thumb-hover: rgba(74, 157, 90, 0.5);
 }
 
 /* ============================================================
@@ -83,12 +186,12 @@ html, body, #app {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: rgba(121, 121, 121, 0.4);
+  background: var(--scrollbar-thumb);
   border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(100, 100, 100, 0.6);
+  background: var(--scrollbar-thumb-hover);
 }
 
 ::-webkit-scrollbar-corner {
@@ -188,8 +291,9 @@ html, body, #app {
   left: 50%;
   transform: translateX(-50%);
   padding: 2px 8px;
-  background: #000;
-  color: #fff;
+  background: var(--tooltip-bg);
+  border: 1px solid var(--tooltip-border);
+  color: var(--tooltip-label);
   font-size: 11px;
   border-radius: 3px;
   white-space: nowrap;

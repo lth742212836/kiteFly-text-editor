@@ -64,6 +64,7 @@ const emit = defineEmits(['close'])
 // 从 EditorPanel 注入 Monaco 实例和编辑器引用
 const monaco = inject('monacoInstance', null)
 const editorRef = inject('editorRef', null)
+const findInitialText = inject('findInitialText', ref(''))
 
 // 查找状态
 const findInputRef = ref(null)
@@ -83,6 +84,15 @@ let decorations = []
 
 onMounted(async () => {
   await nextTick()
+  
+  // 使用父组件提供的初始查找文本（从编辑器选中文本获取）
+  if (findInitialText.value) {
+    findText.value = findInitialText.value
+    // 等待 Vue 更新 DOM 后再执行查找
+    await nextTick()
+    performFind()
+  }
+  
   findInputRef.value?.focus()
 })
 

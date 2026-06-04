@@ -66,6 +66,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
   /** 从最近文件列表中移除指定文件 */
   removeRecentFile: (filePath) => ipcRenderer.invoke('app:removeRecentFile', filePath),
 
+  /** 将文件添加到最近文件列表顶部（用于切换已打开文件时更新排序） */
+  addRecentFile: (filePath) => ipcRenderer.invoke('app:addRecentFile', filePath),
+
   /**
    * 检测文件编码
    * @param {string} filePath - 文件路径
@@ -79,6 +82,17 @@ contextBridge.exposeInMainWorld('electronAPI', {
    * @returns {Promise<string[]>} 有效的文件路径数组
    */
   validateFiles: (filePaths) => ipcRenderer.invoke('fs:validateFiles', filePaths),
+
+  // ============================================================
+  // Shell 操作
+  // ============================================================
+
+  /**
+   * 在系统文件管理器中打开文件所在文件夹
+   * @param {string} filePath - 文件绝对路径
+   * @returns {Promise<{success: boolean, error?: string}>}
+   */
+  showItemInFolder: (filePath) => ipcRenderer.invoke('shell:showItemInFolder', filePath),
 
   // ============================================================
   // 主进程事件监听（菜单操作等）

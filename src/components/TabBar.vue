@@ -43,6 +43,8 @@
       @click.stop
     >
       <div class="context-menu-item" @click="closeTab">关闭</div>
+      <div class="context-menu-item" @click="closeLeftTabs">关闭左侧</div>
+      <div class="context-menu-item" @click="closeRightTabs">关闭右侧</div>
       <div class="context-menu-item" @click="closeOtherTabs">关闭其他</div>
       <div class="context-menu-item" @click="closeAllTabs">关闭所有</div>
     </div>
@@ -79,8 +81,10 @@ function showContextMenu(event, tab) {
   contextMenu.y = event.clientY
   contextMenu.tabId = tab.id
 
-  // 点击其他地方关闭菜单
-  const closeMenu = () => {
+  // 点击其他地方关闭菜单（延迟注册，避免当前右键事件触发关闭）
+  const closeMenu = (e) => {
+    // 忽略菜单项上的点击（菜单项自己处理关闭）
+    if (e.target.closest('.context-menu')) return
     contextMenu.visible = false
     document.removeEventListener('click', closeMenu)
   }
@@ -91,6 +95,22 @@ function showContextMenu(event, tab) {
 function closeTab() {
   if (contextMenu.tabId) {
     tabsStore.closeTab(contextMenu.tabId)
+  }
+  contextMenu.visible = false
+}
+
+/** 关闭左侧所有标签页 */
+function closeLeftTabs() {
+  if (contextMenu.tabId) {
+    tabsStore.closeLeftTabs(contextMenu.tabId)
+  }
+  contextMenu.visible = false
+}
+
+/** 关闭右侧所有标签页 */
+function closeRightTabs() {
+  if (contextMenu.tabId) {
+    tabsStore.closeRightTabs(contextMenu.tabId)
   }
   contextMenu.visible = false
 }
