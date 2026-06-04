@@ -6,11 +6,15 @@
   "scripts": {
     "dev": "vite",
     "build:vue": "vite build",
-    "electron:dev": "node scripts/dev.js",
-    "electron:build:mac": "npm run build:vue && electron-builder --mac",
-    "electron:build:win": "npm run build:vue && electron-builder --win",
-    "electron:build:linux": "npm run build:vue && electron-builder --linux",
-    "electron:build:all": "npm run build:vue && electron-builder --mac --win --linux"
+    "build:native": "node-gyp rebuild",
+    "build:native:debug": "node-gyp rebuild --debug",
+    "build:native:check": "node -e \"const fs=require('fs');if(!fs.existsSync('build/Release/txtedit_native.node')){require('child_process').execSync('npx node-gyp rebuild',{stdio:'inherit'})}else{console.log('[Native] already built')}\"",
+    "electron:dev": "npm run build:native:check && node scripts/dev.js",
+    "electron:build:mac": "npm run build:native && npm run build:vue && electron-builder --mac",
+    "electron:build:win": "npm run build:native && npm run build:vue && electron-builder --win",
+    "electron:build:linux": "npm run build:native && npm run build:vue && electron-builder --linux",
+    "electron:build:all": "npm run build:native && npm run build:vue && electron-builder --mac --win --linux",
+    "postinstall": "node-gyp rebuild 2>/dev/null || echo 'C++ native module build skipped (optional)'"
   },
   "build": {
     "appId": "com.txtedit.app",
@@ -21,6 +25,7 @@
     "files": [
       "dist/**/*",
       "electron/**/*",
+      "native/build/Release/**/*",
       "package.json"
     ],
     "mac": {
@@ -71,6 +76,8 @@
     "@vitejs/plugin-vue": "^5.0.4",
     "electron": "^30.0.1",
     "electron-builder": "^24.13.3",
+    "node-addon-api": "^7.1.1",
+    "node-gyp": "^10.3.1",
     "playwright": "^1.60.0",
     "vite": "^5.2.11"
   },

@@ -328,6 +328,7 @@ function initEditor() {
     ...options,
     value: '',
     language: 'plaintext',
+    theme: getMonacoTheme(),
   })
 
   // 更新共享的编辑器引用
@@ -401,7 +402,9 @@ async function updateEditorContent() {
     monaco.editor.setModelLanguage(model, language)
 
     if (tab.isLargeFile) {
-      // 大文件：分片加载 + 进度条（先设置 loading 状态，让进度条先渲染）
+      // 大文件：分片加载 + 进度条
+      // 如果已在加载中（如 openFiles 大文件路径正在加载），跳过避免重复
+      if (loadingLargeFile.value) return
       loadingLargeFile.value = true
       loadingFileName.value = tab.title
       loadingFileSize.value = `${formatFileSize(tab.fileSize)}`
@@ -553,39 +556,23 @@ async function openFiles(filePaths) {
         const isLarge = result.fileSize > 2 * 1024 * 1024
 
         if (isLarge) {
-          // 大文件：先显示进度条（不阻塞 UI），再创建 tab 和加载内容
+          // 大文件：先创建标签页，再显示进度条并加载内容
+          // 创建标签页（大文件内容不放入响应式 store，存入非响应式 Map）
+          tabsStore.openFileTab(filePath, result.content, result.encoding, result.fileSize)
+
           loadingLargeFile.value = true
           loadingFileName.value = filePath.split(/[/\\]/).pop()
           loadingFileSize.value = `${formatFileSize(result.fileSize)}`
           loadingProgress.value = 0
-        }
 
-        // 创建标签页（大文件内容不放入响应式 store）
-        tabsStore.openFileTab(filePath, result.content, result.encoding, result.fileSize)
-
-        // 等待 Vue 响应式更新完成，确保进度条 DOM 渲染
-        await nextTick()
-
-        if (isLarge) {
-          // 大文件：初始化编辑器后分片加载内容
-          if (!editor) initEditor()
-          if (editor && tabsStore.activeTab) {
-            const model = editor.getModel()
-            if (model) {
-              const tab = tabsStore.activeTab
-              const language = tab.highlightEnabled ? (tab.language || 'plaintext') : 'plaintext'
-              monaco.editor.setModelLanguage(model, language)
-              if (tab.isLargeFile && !tab.highlightEnabled) {
-                editor.updateOptions(getEffectiveOptions(tab))
-              }
-              // 分片加载（内部会先 await nextTick 确保进度条可见）
-              const content = tabsStore.getTabContent(tab.id)
-              await loadLargeFileContent(model, content, tab)
-            }
-          }
+          // 等待进度条 DOM 渲染后调用 updateEditorContent 统一加载
+          await nextTick()
+          await updateEditorContent()
           loadingLargeFile.value = false
         } else {
-          // 小文件：正常加载
+          // 小文件：创建标签页并加载
+          tabsStore.openFileTab(filePath, result.content, result.encoding, result.fileSize)
+          await nextTick()
           updateEditorContent()
         }
       } else {

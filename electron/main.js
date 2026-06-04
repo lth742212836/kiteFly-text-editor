@@ -14,6 +14,21 @@ const path = require('path')
 const fs = require('fs')
 
 // ============================================================
+// 原生模块加载（C++ 高性能文件操作）
+// 加载失败时自动降级为纯 JS 实现
+// ============================================================
+
+/** @type {object|null} C++ 原生模块实例 */
+let native = null
+
+try {
+  native = require('../build/Release/txtedit_native.node')
+  console.log('[TxtEdit] C++ 原生模块加载成功 - 文件操作将使用高性能实现')
+} catch (e) {
+  console.log('[TxtEdit] C++ 原生模块未编译，使用 JS 回退方案:', e.message)
+}
+
+// ============================================================
 // 全局状态
 // ============================================================
 
@@ -382,29 +397,62 @@ function registerIpcHandlers() {
 
   /**
    * 读取文件内容（支持编码检测）
-   * 使用 iconv-lite 进行编码转换
+   * 优先使用 C++ 原生模块（mmap 零拷贝），降级使用 iconv-lite
    * 返回文件大小用于前端大文件检测（>2MB 自动禁用高亮等重功能）
    */
   ipcMain.handle('fs:readFile', async (_, filePath) => {
     try {
+      // 尝试使用 C++ 原生模块读取
+      if (native) {
+        try {
+          const nativeResult = native.readFile(filePath)
+          if (nativeResult.success) {
+            // BigInt 转 Number（文件大小在 JS 安全整数范围内）
+            const fileSize = Number(nativeResult.fileSize)
+            
+            // 如果原生模块编码检测置信度低，回退到 jschardet
+            let encoding = nativeResult.encoding
+            let content = nativeResult.content
+            
+            if (nativeResult.encodingConfidence < 0.8) {
+              // 使用 jschardet 二次确认
+              const stat = fs.statSync(filePath)
+              const buffer = fs.readFileSync(filePath)
+              const detectedEnc = detectEncoding(buffer)
+              if (detectedEnc !== encoding) {
+                encoding = detectedEnc
+                try {
+                  const iconv = require('iconv-lite')
+                  content = iconv.decode(buffer, encoding)
+                } catch (e) {
+                  // 保持原生模块的转换结果
+                }
+              }
+            }
+            
+            addToRecentFiles(filePath)
+            return { success: true, content, encoding, fileSize }
+          }
+        } catch (nativeErr) {
+          console.warn('[TxtEdit] 原生模块读取失败，回退 JS:', nativeErr.message)
+        }
+      }
+      
+      // JS 回退方案（原有逻辑）
       const stat = fs.statSync(filePath)
       const fileSize = stat.size
       const buffer = fs.readFileSync(filePath)
       const encoding = detectEncoding(buffer)
       
-      // 使用 iconv-lite 按检测到的编码解码
       let content = ''
       try {
         const iconv = require('iconv-lite')
         content = iconv.decode(buffer, encoding)
       } catch (e) {
-        // 如果 iconv 解码失败，回退到 utf-8
         content = buffer.toString('utf-8')
       }
 
-      // 更新最近文件列表
       addToRecentFiles(filePath)
-
       return { success: true, content, encoding, fileSize }
     } catch (error) {
       return { success: false, error: error.message }
@@ -413,17 +461,29 @@ function registerIpcHandlers() {
 
   /**
    * 写入文件内容
-   * 使用指定的编码格式保存文件
+   * 优先使用 C++ 原生模块（原子写入），降级使用 iconv-lite
    */
   ipcMain.handle('fs:writeFile', async (_, filePath, content, encoding) => {
     try {
+      // 尝试使用 C++ 原生模块写入（原子写入：先写临时文件，再 rename）
+      if (native) {
+        try {
+          const nativeResult = native.writeFile(filePath, content, encoding || 'utf-8')
+          if (nativeResult.success) {
+            addToRecentFiles(filePath)
+            return { success: true }
+          }
+        } catch (nativeErr) {
+          console.warn('[TxtEdit] 原生模块写入失败，回退 JS:', nativeErr.message)
+        }
+      }
+      
+      // JS 回退方案（原有逻辑）
       const iconv = require('iconv-lite')
       const buffer = iconv.encode(content, encoding || 'utf-8')
       fs.writeFileSync(filePath, buffer)
       
-      // 更新最近文件列表
       addToRecentFiles(filePath)
-
       return { success: true }
     } catch (error) {
       return { success: false, error: error.message }
@@ -507,9 +567,27 @@ function registerIpcHandlers() {
 
   /**
    * 检测文件编码
+   * 优先使用 C++ 原生模块，降级使用 jschardet
    */
   ipcMain.handle('fs:detectEncoding', async (_, filePath) => {
     try {
+      // 尝试使用 C++ 原生模块检测
+      if (native) {
+        try {
+          const buffer = fs.readFileSync(filePath)
+          const nativeResult = native.detectEncoding(buffer)
+          return { 
+            success: true, 
+            encoding: nativeResult.encoding,
+            confidence: nativeResult.confidence,
+            hasBOM: nativeResult.hasBOM,
+          }
+        } catch (nativeErr) {
+          console.warn('[TxtEdit] 原生模块编码检测失败，回退 JS:', nativeErr.message)
+        }
+      }
+      
+      // JS 回退方案
       const buffer = fs.readFileSync(filePath)
       return { success: true, encoding: detectEncoding(buffer) }
     } catch (error) {
@@ -531,9 +609,23 @@ function registerIpcHandlers() {
 
   /**
    * 验证文件路径是否为有效的文本文件
-   * 返回文件路径和大小信息，用于前端大文件预警
+   * 优先使用 C++ 原生模块批量验证，降级使用 fs.statSync
    */
   ipcMain.handle('fs:validateFiles', async (_, filePaths) => {
+    // 尝试使用 C++ 原生模块批量验证
+    if (native) {
+      try {
+        const nativeResults = native.validateFiles(filePaths)
+        return nativeResults.map(r => ({
+          path: r.path,
+          size: Number(r.size),
+        }))
+      } catch (nativeErr) {
+        console.warn('[TxtEdit] 原生模块验证失败，回退 JS:', nativeErr.message)
+      }
+    }
+    
+    // JS 回退方案
     const validFiles = []
     for (const filePath of filePaths) {
       try {
@@ -542,7 +634,7 @@ function registerIpcHandlers() {
           validFiles.push({ path: filePath, size: stat.size })
         }
       } catch (e) {
-        // 文件不存在或无权限，跳过
+        // 跳过无效文件
       }
     }
     return validFiles
