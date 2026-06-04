@@ -112,8 +112,22 @@ npm run electron:dev
 ### 构建打包
 
 ```bash
-# macOS
+# macOS（编译c++、dist、双架构arm64+x64）
 npm run electron:build:mac
+
+
+
+# 编译并打包携带c++模块（推荐!!!）
+npm run build:native && npm run build:vue && ELECTRON_MIRROR="https://npmmirror.com/mirrors/electron/"  npx electron-builder --mac --arm64
+
+
+# 只打 ARM64（Apple Silicon）
+npx electron-builder --mac --arm64
+# 镜像下载
+ELECTRON_MIRROR="https://npmmirror.com/mirrors/electron/" npx electron-builder --mac --arm64
+
+# 或只打 x64
+ELECTRON_MIRROR="https://npmmirror.com/mirrors/electron/" npx electron-builder --mac --x64
 
 # Windows
 npm run electron:build:win

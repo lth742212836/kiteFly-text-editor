@@ -25,7 +25,7 @@
     "files": [
       "dist/**/*",
       "electron/**/*",
-      "native/build/Release/**/*",
+      "build/Release/**/*",
       "package.json"
     ],
     "mac": {
