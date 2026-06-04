@@ -45,6 +45,17 @@
       <span class="status-item" v-if="tabsStore.activeTab">
         空格: {{ tabSize }}
       </span>
+
+      <!-- 高亮开关 -->
+      <span
+        class="status-item highlight-toggle"
+        :class="{ 'highlight-off': !tabsStore.activeTab?.highlightEnabled }"
+        v-if="tabsStore.activeTab"
+        @click="tabsStore.toggleHighlight()"
+        :title="tabsStore.activeTab?.highlightEnabled ? '点击关闭文本高亮' : '点击开启文本高亮'"
+      >
+        {{ tabsStore.activeTab?.highlightEnabled ? '✦ 高亮 开' : '✧ 高亮 关' }}
+      </span>
     </div>
 
     <!-- 右侧状态信息 -->
@@ -206,5 +217,23 @@ function onEncodingChange(encoding) {
 .encoding-select option {
   background: #ffffff;
   color: #333333;
+}
+
+.highlight-toggle {
+  cursor: pointer;
+  opacity: 0.85;
+  transition: opacity 0.15s;
+}
+
+.highlight-toggle:hover {
+  opacity: 1;
+}
+
+.highlight-toggle.highlight-off {
+  opacity: 0.5;
+}
+
+.highlight-toggle.highlight-off:hover {
+  opacity: 0.8;
 }
 </style>

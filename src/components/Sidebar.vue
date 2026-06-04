@@ -28,6 +28,7 @@
           <span class="file-icon">📄</span>
           <span class="file-name">{{ getFileName(filePath) }}</span>
           <span class="file-path">{{ getDirName(filePath) }}</span>
+          <span class="file-remove" title="从列表中移除" @click="removeRecent($event, filePath)">×</span>
         </div>
       </div>
     </div>
@@ -61,11 +62,14 @@
 /**
  * Sidebar.vue - 侧边栏组件逻辑
  */
-import { inject } from 'vue'
+import { inject, ref } from 'vue'
 import { useSidebarStore } from '@/stores/sidebar'
 
 const sidebarStore = useSidebarStore()
 const editorPanelRef = inject('editorPanelRef')
+
+/** 正在删除的文件路径，用于阻止 openFile 在删除期间被意外触发 */
+const deletingFile = ref(null)
 
 /**
  * 从文件路径提取文件名
@@ -92,7 +96,25 @@ function getDirName(filePath) {
  * @param {string} filePath - 文件路径
  */
 async function openFile(filePath) {
+  // 如果正在删除该文件，跳过打开操作
+  if (deletingFile.value === filePath) return
   editorPanelRef.value?.openFiles([filePath])
+}
+
+/**
+ * 从最近文件列表中移除文件
+ * @param {MouseEvent} event - 鼠标事件
+ * @param {string} filePath - 文件路径
+ */
+async function removeRecent(event, filePath) {
+  event.stopPropagation()
+  event.preventDefault()
+  // 设置删除标记，防止 openFile 被意外触发
+  deletingFile.value = filePath
+  if (confirm(`确定要从列表中移除 "${getFileName(filePath)}" 吗？`)) {
+    await sidebarStore.removeRecentFile(filePath)
+  }
+  deletingFile.value = null
 }
 
 /**
@@ -189,10 +211,15 @@ async function handleEntryClick(entry) {
   cursor: pointer;
   transition: background 0.1s;
   font-size: 12px;
+  position: relative;
 }
 
 .file-item:hover {
   background: var(--bg-hover);
+}
+
+.file-item:hover .file-remove {
+  opacity: 1;
 }
 
 .file-icon {
@@ -217,5 +244,26 @@ async function handleEntryClick(entry) {
   white-space: nowrap;
   max-width: 110px;
   opacity: 0.5;
+}
+
+.file-remove {
+  flex-shrink: 0;
+  width: 18px;
+  height: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 3px;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-muted);
+  opacity: 0;
+  transition: opacity 0.15s, background 0.15s, color 0.15s;
+  line-height: 1;
+}
+
+.file-remove:hover {
+  background: rgba(255, 80, 80, 0.15);
+  color: #ff5050;
 }
 </style>

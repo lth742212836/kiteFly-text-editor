@@ -25,12 +25,6 @@ function generateTabId() {
 const LARGE_FILE_THRESHOLD = 2 * 1024 * 1024
 
 /**
- * 超大文件阈值（50MB）
- * 超过此大小的文件将强制使用纯文本模式，禁用 minimap、语法高亮等
- */
-const HUGE_FILE_THRESHOLD = 50 * 1024 * 1024
-
-/**
  * 大文件内容非响应式存储
  * 使用 Map 按 tabId 存储大文件内容，避免 Vue 响应式代理大字符串
  * @type {Map<string, string>}
@@ -87,8 +81,8 @@ export const useTabsStore = defineStore('tabs', () => {
       encoding: 'utf-8',     // 文件编码
       modified: false,       // 是否有未保存的修改
       language: 'plaintext', // Monaco Editor 语言模式
-      isLargeFile: false,    // 是否为大文件（>2MB）
-      isHugeFile: false,     // 是否为超大文件（>50MB）
+      isLargeFile: false,    // 是否为大文件（>2MB），大文件自动禁用高亮等重功能
+      highlightEnabled: true,// 是否启用文本高亮（用户可手动切换）
       fileSize: 0,           // 文件大小（字节）
     }
 
@@ -152,13 +146,12 @@ export const useTabsStore = defineStore('tabs', () => {
     const id = generateTabId()
     const fileName = filePath.split(/[/\\]/).pop()
     
-    // 大文件检测：根据内容长度或传入的文件大小判断
+    // 大文件检测（>2MB）：内容存非响应式 Map，编辑器自动禁用高亮等重功能
     const actualSize = fileSize > 0 ? fileSize : Buffer.byteLength(content, 'utf-8')
     const isLarge = actualSize > LARGE_FILE_THRESHOLD
-    const isHuge = actualSize > HUGE_FILE_THRESHOLD
     
-    // 大文件使用纯文本模式，避免语法高亮开销
-    const language = isHuge ? 'plaintext' : detectLanguage(fileName)
+    // 始终检测文件对应的语言模式，语法高亮在编辑器中根据 highlightEnabled 控制
+    const language = detectLanguage(fileName)
 
     const tab = {
       id,
@@ -169,7 +162,7 @@ export const useTabsStore = defineStore('tabs', () => {
       modified: false,
       language,
       isLargeFile: isLarge,
-      isHugeFile: isHuge,
+      highlightEnabled: !isLarge,        // 大文件默认关闭高亮，小文件默认开启
       fileSize: actualSize,
     }
 
@@ -295,6 +288,20 @@ export const useTabsStore = defineStore('tabs', () => {
   }
 
   /**
+   * 切换当前标签页的高亮状态
+   * 使用 highlightVersion 计数器确保跨组件响应式更新可靠触发
+   */
+  const highlightVersion = ref(0)
+
+  function toggleHighlight() {
+    const tab = tabs.value.find(t => t.id === activeTabId.value)
+    if (tab) {
+      tab.highlightEnabled = !tab.highlightEnabled
+      highlightVersion.value++
+    }
+  }
+
+  /**
    * 关闭所有标签页
    * 同时清理所有大文件内容缓存
    */
@@ -361,6 +368,7 @@ export const useTabsStore = defineStore('tabs', () => {
     // 状态
     tabs,
     activeTabId,
+    highlightVersion,
     // 计算属性
     activeTab,
     tabCount,
@@ -376,10 +384,10 @@ export const useTabsStore = defineStore('tabs', () => {
     updateTabContent,
     markTabSaved,
     updateTabEncoding,
+    toggleHighlight,
     closeAllTabs,
     closeOtherTabs,
     // 常量
     LARGE_FILE_THRESHOLD,
-    HUGE_FILE_THRESHOLD,
   }
 })

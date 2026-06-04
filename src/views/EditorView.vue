@@ -158,11 +158,11 @@ async function onDrop(e) {
 
   if (filePaths.length === 0) return
 
-  // 验证文件路径有效性
-  const validPaths = await window.electronAPI.validateFiles(filePaths)
-  if (validPaths.length > 0) {
-    editorPanelRef.value?.openFiles(validPaths)
-  }
+  // 提取有效文件路径
+  const validPaths = filePaths.filter(p => p)
+  if (validPaths.length === 0) return
+
+  editorPanelRef.value?.openFiles(validPaths)
 }
 
 /**

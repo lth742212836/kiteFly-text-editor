@@ -383,12 +383,13 @@ function registerIpcHandlers() {
   /**
    * 读取文件内容（支持编码检测）
    * 使用 iconv-lite 进行编码转换
-   * 返回文件大小用于前端大文件检测
+   * 返回文件大小用于前端大文件检测（>2MB 自动禁用高亮等重功能）
    */
   ipcMain.handle('fs:readFile', async (_, filePath) => {
     try {
+      const stat = fs.statSync(filePath)
+      const fileSize = stat.size
       const buffer = fs.readFileSync(filePath)
-      const fileSize = buffer.length
       const encoding = detectEncoding(buffer)
       
       // 使用 iconv-lite 按检测到的编码解码
@@ -454,6 +455,15 @@ function registerIpcHandlers() {
   })
 
   /**
+   * 从最近文件列表中移除指定文件
+   */
+  ipcMain.handle('app:removeRecentFile', (_, filePath) => {
+    recentFiles = recentFiles.filter(f => f !== filePath)
+    saveRecentFiles()
+    return true
+  })
+
+  /**
    * 获取文件夹下的文件列表
    */
   ipcMain.handle('fs:listDir', async (_, dirPath) => {
@@ -501,7 +511,7 @@ function registerIpcHandlers() {
 
   /**
    * 验证文件路径是否为有效的文本文件
-   * 用于前端拖拽后验证文件是否可打开
+   * 返回文件路径和大小信息，用于前端大文件预警
    */
   ipcMain.handle('fs:validateFiles', async (_, filePaths) => {
     const validFiles = []
@@ -509,7 +519,7 @@ function registerIpcHandlers() {
       try {
         const stat = fs.statSync(filePath)
         if (stat.isFile()) {
-          validFiles.push(filePath)
+          validFiles.push({ path: filePath, size: stat.size })
         }
       } catch (e) {
         // 文件不存在或无权限，跳过

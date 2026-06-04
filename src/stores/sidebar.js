@@ -70,6 +70,16 @@ export const useSidebarStore = defineStore('sidebar', () => {
     }
   }
 
+  /** 从最近文件列表中移除指定文件 */
+  async function removeRecentFile(filePath) {
+    try {
+      await window.electronAPI.removeRecentFile(filePath)
+      recentFiles.value = recentFiles.value.filter(f => f !== filePath)
+    } catch (e) {
+      console.error('移除最近文件失败:', e)
+    }
+  }
+
   return {
     visible,
     currentFolder,
@@ -82,5 +92,6 @@ export const useSidebarStore = defineStore('sidebar', () => {
     setFolderEntries,
     setRecentFiles,
     loadRecentFiles,
+    removeRecentFile,
   }
 })

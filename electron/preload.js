@@ -63,6 +63,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
   /** 获取最近打开的文件列表 */
   getRecentFiles: () => ipcRenderer.invoke('app:getRecentFiles'),
 
+  /** 从最近文件列表中移除指定文件 */
+  removeRecentFile: (filePath) => ipcRenderer.invoke('app:removeRecentFile', filePath),
+
   /**
    * 检测文件编码
    * @param {string} filePath - 文件路径

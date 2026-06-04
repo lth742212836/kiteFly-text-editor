@@ -45,9 +45,11 @@
  */
 import { ref, watch, onMounted, onBeforeUnmount, nextTick, provide } from 'vue'
 import { useTabsStore } from '@/stores/tabs'
+import { useSidebarStore } from '@/stores/sidebar'
 import * as monaco from 'monaco-editor'
 
 const tabsStore = useTabsStore()
+const sidebarStore = useSidebarStore()
 
 // 通过 provide 将编辑器实例和 monaco 实例共享给子组件（FindReplacePanel, StatusBar）
 provide('monacoInstance', monaco)
@@ -99,56 +101,53 @@ const baseEditorOptions = {
   lineHeight: 22,
   padding: { top: 8 },
   theme: 'vs-dark',
+  unicodeHighlight: {
+    ambiguousCharacters: false,
+    invisibleCharacters: false,
+    nonBasicASCII: false,
+  },
 }
 
 /**
- * 根据文件大小获取优化的编辑器配置
- * 大文件禁用语法高亮等重功能以提升性能
+ * 根据文件大小和高亮开关获取优化的编辑器配置
+ * - 小文件：始终使用完整配置
+ * - 大文件 + 高亮关闭：纯文本轻量模式
+ * - 大文件 + 高亮开启：恢复完整配置（用户手动开启）
  * 
  * @param {object} tab - 标签页对象
  * @returns {object} Monaco Editor 配置
  */
 function getEffectiveOptions(tab) {
-  if (!tab || !tab.isLargeFile) return baseEditorOptions
+  if (!tab) return baseEditorOptions
 
-  if (tab.isHugeFile) {
-    // 超大文件 (>50MB)：纯文本模式，禁用所有重功能
-    return {
-      ...baseEditorOptions,
-      minimap: { enabled: false },
-      lineNumbers: 'on',
-      renderWhitespace: 'none',
-      bracketPairColorization: { enabled: false },
-      autoClosingBrackets: 'never',
-      autoClosingQuotes: 'never',
-      formatOnPaste: false,
-      smoothScrolling: false,
-      cursorSmoothCaretAnimation: 'off',
-      renderLineHighlight: 'none',
-      wordWrap: 'on',             // 开启自动换行避免超宽行渲染性能问题
-      folding: false,             // 禁用代码折叠
-      renderIndentGuides: false,  // 禁用缩进参考线
-      occurrencesHighlight: false,// 禁用高亮匹配
-      selectionHighlight: false,  // 禁用选区高亮
-      glyphMargin: false,         // 禁用字形边距
-      lineDecorationsWidth: 0,    // 减少行装饰宽度
-      overviewRulerLanes: 0,      // 禁用概览标尺
-      hideCursorInOverviewRuler: true,
-      overviewRulerBorder: false,
-    }
+  // 小文件，或大文件但用户手动开启了高亮：使用完整配置
+  if (!tab.isLargeFile || tab.highlightEnabled) {
+    return baseEditorOptions
   }
 
-  // 大文件 (>2MB, ≤50MB)：适度禁用部分功能
+  // 大文件且高亮关闭：纯文本模式，禁用所有高亮和重功能以保证性能
   return {
     ...baseEditorOptions,
     minimap: { enabled: false },
+    lineNumbers: 'on',
     renderWhitespace: 'none',
     bracketPairColorization: { enabled: false },
+    autoClosingBrackets: 'never',
+    autoClosingQuotes: 'never',
+    formatOnPaste: false,
     smoothScrolling: false,
     cursorSmoothCaretAnimation: 'off',
-    renderLineHighlight: 'line',
+    renderLineHighlight: 'none',
+    wordWrap: 'on',
     folding: false,
     renderIndentGuides: false,
+    occurrencesHighlight: false,
+    selectionHighlight: false,
+    glyphMargin: false,
+    lineDecorationsWidth: 0,
+    overviewRulerLanes: 0,
+    hideCursorInOverviewRuler: true,
+    overviewRulerBorder: false,
   }
 }
 
@@ -166,6 +165,23 @@ onMounted(() => {
     () => tabsStore.activeTabId,
     () => {
       nextTick(() => updateEditorContent())
+    }
+  )
+
+  // 监听高亮开关切换，更新语法高亮语言模式和编辑器选项
+  watch(
+    () => tabsStore.highlightVersion,
+    () => {
+      if (!editor || !tabsStore.activeTab) return
+      const tab = tabsStore.activeTab
+      const model = editor.getModel()
+      if (model) {
+        // 高亮开启：使用文件对应的语言模式；高亮关闭：切换为纯文本
+        const language = tab.highlightEnabled ? (tab.language || 'plaintext') : 'plaintext'
+        monaco.editor.setModelLanguage(model, language)
+      }
+      const options = getEffectiveOptions(tab)
+      editor.updateOptions(options)
     }
   )
 })
@@ -246,21 +262,21 @@ function updateEditorContent() {
 
   const tab = tabsStore.activeTab
 
+  // 大文件：先应用轻量配置再 setValue，避免 Monaco 全量渲染卡死
+  const options = getEffectiveOptions(tab)
+  editor.updateOptions(options)
+
   // 获取内容（大文件从非响应式 Map 读取）
   const content = tabsStore.getTabContent(tab.id)
 
   // 更新编辑器模型的语言和值
   const model = editor.getModel()
   if (model) {
-    // 设置语言模式
-    monaco.editor.setModelLanguage(model, tab.language || 'plaintext')
-    // 使用 pushEditOperations 替代 setValue，大文件时减少撤销栈内存占用
+    // 根据高亮开关决定语言模式：关闭时强制纯文本（无语法高亮），开启时使用文件对应语言
+    const language = tab.highlightEnabled ? (tab.language || 'plaintext') : 'plaintext'
+    monaco.editor.setModelLanguage(model, language)
     model.setValue(content)
   }
-
-  // 根据当前标签页的文件大小动态更新编辑器选项
-  const options = getEffectiveOptions(tab)
-  editor.updateOptions(options)
 
   // 内容更新后触发重新布局，确保编辑器填满容器
   editor.layout()
@@ -268,13 +284,16 @@ function updateEditorContent() {
 
 /**
  * 打开文件（支持批量）
- * 已打开的文件直接切换标签页（跳过 IPC），未打开的文件才读取内容
- * 大文件自动启用优化策略
+ * 已打开的文件直接切换标签页（跳过 IPC），未打开的文件先预检大小
+ * 超大文件（>50MB）弹出确认提示，大文件（>2MB）自动启用优化策略
  * 
  * @param {string[]} filePaths - 文件路径数组
  */
 async function openFiles(filePaths) {
-  for (const filePath of filePaths) {
+  const entries = await window.electronAPI.validateFiles(filePaths)
+  if (entries.length === 0) return
+
+  for (const { path: filePath } of entries) {
     try {
       // 优先检查文件是否已在标签页中打开，已打开则直接切换（跳过 IPC）
       if (tabsStore.activateTabByPath(filePath)) {
@@ -286,8 +305,7 @@ async function openFiles(filePaths) {
       // 文件未打开，通过 IPC 读取文件内容
       const result = await window.electronAPI.readFile(filePath)
       if (result.success) {
-        const fileSize = result.fileSize || Buffer.byteLength(result.content, 'utf-8')
-        tabsStore.openFileTab(filePath, result.content, result.encoding, fileSize)
+        tabsStore.openFileTab(filePath, result.content, result.encoding, result.fileSize)
         await nextTick()
         updateEditorContent()
       } else {
@@ -297,6 +315,9 @@ async function openFiles(filePaths) {
       console.error('打开文件异常:', e)
     }
   }
+
+  // 刷新侧边栏最近文件列表，确保新打开的文件即时显示
+  sidebarStore.loadRecentFiles()
 }
 
 /**
